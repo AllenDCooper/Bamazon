@@ -22,28 +22,30 @@ console.log("connected as id " + connection.threadId);
 // initialize global variables used for printing to terminal
 var divider = " || ";
 var lineBreak = "-----------------------\n";
-var productArr = [];
 
 function displayItems() {
+    
     // build MySQL query string
     var queryString = 'SELECT * FROM ??'
+
     // query MySQL database
     connection.query(queryString, ["products"], function(err, res){
         if (err) {
             return console.log("There was an error ", err)
         } 
         console.log(lineBreak + "ITEMS FOR SALE")
+
         // loop through response and format data for print
         res.forEach(function(element){
             var resPrint = element.item_id + ". " + element.product_name + divider + "Dept: " + element.department_name + divider + "Price: $" + element.price + divider + "In-stock: " + element.stock_quantity
             console.log(resPrint)
-            productArr.push(resPrint);
         })
 
         console.log(lineBreak);
         selectItem();
     })
 }
+
 // run display items when bamazonCustomer.js is called in command line
 displayItems();
 
@@ -62,23 +64,41 @@ function selectItem() {
         }
     ]).then(function(inquirerResponse){
         var productID = parseInt(inquirerResponse.productID);
-        var quantity = inquirerResponse.quantity;
-        console.log(productID);
-        console.log(quantity);
-        isAvailable(productID, quantity);
+        var qty = inquirerResponse.quantity;
+        isAvailable(productID, qty);
     })
 };
 
-function isAvailable(product, quantity) {
+function isAvailable(product, qty) {
     var queryString = 'SELECT ?? FROM ?? WHERE item_id = ?';
-    connection.query(queryString, ['stock_quantity', 'products', product], function(err, res){
+    connection.query(queryString, ['stock_quantity', 'products', product], function(err, res) {
         if(err) throw err;
-        var availableQty = JSON.stringify(res[0].stock_quantity);
-        
-        if ((availableQty - quantity) >= 0) {
-            console.log("Product is available for purchase in that quantity")
+        // assign variable for response data
+        var availableQty = res[0].stock_quantity;
+        // assign variable for calculation of new quantity after purchase
+        var newQty = availableQty - qty; 
+        // conditional statement that checks to see if desired qty is available
+        if (newQty >= 0) {
+            purchase(product, newQty);
         } else {
-            console.log("Product not available in that quantity")
+            console.log("Insufficient quantity!")
         }
+    })
+}
+
+function purchase(product, newQty) {
+    // build MySQL query string
+    var queryString = 'UPDATE ?? SET stock_quantity = ? WHERE item_id = ?'
+    // query the MQL database
+    connection.query(queryString, ['products', newQty, product], function(err){
+        if (err) throw err;
+        var queryString2 = 'SELECT ?? FROM ?? WHERE item_id = ?'
+        connection.query(queryString2, ['price', 'products', product], function(err, res){
+            if (err) throw err;
+            var price = res[0].price;
+            var totalPrice = (price * newQty);
+            
+            console.log("Purchase confirmed! Total cost: $" + totalPrice)
+        })
     })
 }
