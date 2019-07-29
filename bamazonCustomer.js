@@ -1,28 +1,11 @@
-var mysql = require("mysql");
+var connection = require("./config/connections.js")
 var inquirer = require("inquirer"); 
-
-// set up MySQL database connection
-var connection = mysql.createConnection({
-    host: "localhost",
-    port: 3306,
-    user: "root",
-    password: "AC00per!",
-    database: "bamazon"
-});
-  
-// connect to MySQL database
-connection.connect(function(err) {
-    if (err) {
-        console.error("error connecting: " + err.stack);
-        return;
-    }
-console.log("connected as id " + connection.threadId);
-});
 
 // initialize global variables used for printing to terminal
 var divider = " || ";
 var lineBreak = "-----------------------\n";
 
+// function to display all available items for purchase in the database
 function displayItems() {
     
     // build MySQL query string
@@ -79,14 +62,14 @@ function isAvailable(product, qty) {
         var newQty = availableQty - qty; 
         // conditional statement that checks to see if desired qty is available
         if (newQty >= 0) {
-            purchase(product, newQty);
+            purchase(product, qty, newQty);
         } else {
             console.log("Insufficient quantity!")
         }
     })
 }
 
-function purchase(product, newQty) {
+function purchase(product, qty, newQty) {
     // build MySQL query string
     var queryString = 'UPDATE ?? SET stock_quantity = ? WHERE item_id = ?'
     // query the MQL database
@@ -96,7 +79,7 @@ function purchase(product, newQty) {
         connection.query(queryString2, ['price', 'products', product], function(err, res){
             if (err) throw err;
             var price = res[0].price;
-            var totalPrice = (price * newQty);
+            var totalPrice = (price * qty);
             
             console.log("Purchase confirmed! Total cost: $" + totalPrice)
         })
